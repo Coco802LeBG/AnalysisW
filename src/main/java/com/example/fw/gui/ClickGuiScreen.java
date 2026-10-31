@@ -1,6 +1,7 @@
 package com.example.fw.gui;
 
 import com.example.fw.gui.component.CategoryPanel;
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
@@ -42,7 +43,9 @@ public class ClickGuiScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(Click click, boolean doubled) {
+        double mouseX = click.x(), mouseY = click.y();
+        int button = click.button();
         for (int i = panels.size() - 1; i >= 0; i--) {
             CategoryPanel p = panels.get(i);
             if (p.mouseClicked(mouseX, mouseY, button)) {
@@ -51,19 +54,19 @@ public class ClickGuiScreen extends Screen {
                 return true;
             }
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(click, doubled);
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-        for (CategoryPanel p : panels) p.mouseDragged(mouseX, mouseY, button, width, height);
+    public boolean mouseDragged(Click click, double offsetX, double offsetY) {
+        for (CategoryPanel p : panels) p.mouseDragged(click.x(), click.y(), click.button(), width, height);
         return true;
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        for (CategoryPanel p : panels) p.mouseReleased(mouseX, mouseY, button);
-        return super.mouseReleased(mouseX, mouseY, button);
+    public boolean mouseReleased(Click click) {
+        for (CategoryPanel p : panels) p.mouseReleased(click.x(), click.y(), click.button());
+        return super.mouseReleased(click);
     }
 
     @Override
