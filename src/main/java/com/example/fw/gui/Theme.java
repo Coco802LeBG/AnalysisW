@@ -1,8 +1,18 @@
 package com.example.fw.gui;
 
+import net.minecraft.client.gui.DrawContext;
+
 /** Couleurs ARGB, alpha toujours explicite. */
 public final class Theme {
     private Theme() {}
+
+    /** Remplace DrawContext#drawBorder (supprimé en 1.21.6+). */
+    public static void border(DrawContext c, int x, int y, int w, int h, int color) {
+        c.fill(x, y, x + w, y + 1, color);
+        c.fill(x, y + h - 1, x + w, y + h, color);
+        c.fill(x, y + 1, x + 1, y + h - 1, color);
+        c.fill(x + w - 1, y + 1, x + w, y + h - 1, color);
+    }
 
     public static final int PANEL_BG        = 0x96000000;
     public static final int HEADER_BG       = 0xE6141414;
