@@ -4,7 +4,6 @@ import com.example.fw.gui.Category;
 import com.example.fw.gui.setting.BooleanSetting;
 import com.example.fw.gui.setting.NumberSetting;
 import com.example.fw.render.LineBatch;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.minecraft.block.entity.*;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.world.ClientWorld;
@@ -64,23 +63,20 @@ public class StorageEntityRadar extends Module {
     }
 
     @Override
-    public void onRender(WorldRenderContext ctx, LineBatch batch, MinecraftClient mc) {
-        float td = ctx.tickCounter().getTickDelta(false);
-
+    public void onRender(LineBatch batch, MinecraftClient mc, float td) {
         if (showStorage.get()) for (Box b : storageBoxes) batch.box(b, GOLD);
 
         double maxSq = range.get() * range.get();
-        Vec3d camPos = ctx.camera().getPos();
+        Vec3d cam = batch.cam();
         for (Entity e : mc.world.getEntities()) {
             if (e == mc.player) continue;
             boolean isPlayer = e instanceof PlayerEntity;
             if (isPlayer ? !showPlayers.get() : !(showMobs.get() && e instanceof LivingEntity)) continue;
-            if (e.squaredDistanceTo(camPos) > maxSq) continue;
+            if (e.squaredDistanceTo(cam.x, cam.y, cam.z) > maxSq) continue;
 
-            double dx = MathHelper.lerp(td, e.lastRenderX, e.getX()) - e.getX();
-            double dy = MathHelper.lerp(td, e.lastRenderY, e.getY()) - e.getY();
-            double dz = MathHelper.lerp(td, e.lastRenderZ, e.getZ()) - e.getZ();
-            batch.box(e.getBoundingBox().offset(dx, dy, dz), isPlayer ? RED : CYAN);
+            Vec3d l = e.getLerpedPos(td);
+            batch.box(e.getBoundingBox().offset(l.x - e.getX(), l.y - e.getY(), l.z - e.getZ()),
+                      isPlayer ? RED : CYAN);
         }
     }
 
