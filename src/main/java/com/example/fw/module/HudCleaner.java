@@ -33,7 +33,7 @@ public class HudCleaner extends Module {
 
         Map<UUID, String> tab = new HashMap<>();
         for (PlayerListEntry e : handler.getPlayerList())
-            tab.put(e.getProfile().getId(), e.getProfile().getName());
+            tab.put(e.getProfile().id(), e.getProfile().name());
 
         Set<UUID> ghostsNow = new HashSet<>();
         for (PlayerEntity p : mc.world.getPlayers()) {
@@ -42,7 +42,7 @@ public class HudCleaner extends Module {
             if (id.version() == 2) continue; // NPC de plugins
             ghostsNow.add(id);
             if (ghostTicks.merge(id, 1, Integer::sum) >= GRACE_TICKS && alerted.add(id))
-                warn(mc, p.getGameProfile().getName(), "visible dans le monde mais absent de la TabList");
+                warn(mc, p.getGameProfile().name(), "visible dans le monde mais absent de la TabList");
         }
         ghostTicks.keySet().retainAll(ghostsNow);
 
