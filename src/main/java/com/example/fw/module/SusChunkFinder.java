@@ -6,7 +6,6 @@ import com.example.fw.render.LineBatch;
 import com.example.fw.util.ChunkActivityTracker;
 import com.example.fw.util.ChunkUtil;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -82,7 +81,7 @@ public class SusChunkFinder extends Module {
     }
 
     @Override
-    public void onRender(WorldRenderContext ctx, LineBatch batch, MinecraftClient mc) {
+    public void onRender(LineBatch batch, MinecraftClient mc, float tickProgress) {
         double py = mc.player.getY();
         for (var e : scores.entrySet()) {
             ChunkPos cp = e.getKey();
