@@ -1,61 +1,107 @@
 package com.example.fw.render;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.client.render.*;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
-import org.joml.Matrix4f;
 
-/** Accumule toutes les arêtes de la frame et les dessine en un seul draw call. */
+/**
+ * Projette des boîtes 3D sur l'écran et les trace en 2D avec DrawContext.
+ * (Le pipeline de rendu 3D a été réécrit en 1.21.6+ : RenderSystem.enableBlend, lineWidth,
+ * BufferRenderer, getPositionColorProgram, etc. n'existent plus.)
+ * Toujours visible à travers les murs. Prévu pour la vue à la première personne.
+ */
 public final class LineBatch {
-    private final BufferBuilder buf;
-    private final Matrix4f mat;
-    private final Vec3d cam;
-    private boolean empty = true;
+    private static final double NEAR = 0.05;
 
-    public LineBatch(MatrixStack matrices, Vec3d camPos) {
-        this.cam = camPos;
-        this.mat = matrices.peek().getPositionMatrix();
-        this.buf = Tessellator.getInstance()
-                .begin(VertexFormat.DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
+    private final DrawContext ctx;
+    private final Vec3d cam;
+    private final double rx, ry, rz;   // droite
+    private final double ux, uy, uz;   // haut
+    private final double fx, fy, fz;   // avant
+    private final double focal, cx, cy;
+    private final int screenW, screenH;
+    private final double[][] c = new double[8][3];
+
+    public LineBatch(DrawContext ctx, MinecraftClient mc, float tickProgress) {
+        this.ctx = ctx;
+        ClientPlayerEntity p = mc.player;
+
+        Vec3d pos = p.getLerpedPos(tickProgress);
+        this.cam = new Vec3d(pos.x, pos.y + (p.getEyeY() - p.getY()), pos.z);
+
+        double yaw = Math.toRadians(p.getYaw(tickProgress));
+        double pitch = Math.toRadians(p.getPitch(tickProgress));
+        double cp = Math.cos(pitch), sp = Math.sin(pitch);
+        double sy = Math.sin(yaw), cy2 = Math.cos(yaw);
+
+        fx = -sy * cp; fy = -sp; fz = cy2 * cp;
+        rx = -cy2;     ry = 0;   rz = -sy;
+        // up = right x forward
+        ux = ry * fz - rz * fy;
+        uy = rz * fx - rx * fz;
+        uz = rx * fy - ry * fx;
+
+        this.screenW = mc.getWindow().getScaledWidth();
+        this.screenH = mc.getWindow().getScaledHeight();
+        double fov = Math.toRadians(mc.options.getFov().getValue());
+        this.focal = (screenH / 2.0) / Math.tan(fov / 2.0);
+        this.cx = screenW / 2.0;
+        this.cy = screenH / 2.0;
     }
+
+    public Vec3d cam() { return cam; }
 
     public void box(Box b, int argb) {
-        float x1 = (float) (b.minX - cam.x), y1 = (float) (b.minY - cam.y), z1 = (float) (b.minZ - cam.z);
-        float x2 = (float) (b.maxX - cam.x), y2 = (float) (b.maxY - cam.y), z2 = (float) (b.maxZ - cam.z);
-        empty = false;
+        boolean anyFront = false;
+        for (int i = 0; i < 8; i++) {
+            double wx = (i & 1) == 0 ? b.minX : b.maxX;
+            double wy = (i & 2) == 0 ? b.minY : b.maxY;
+            double wz = (i & 4) == 0 ? b.minZ : b.maxZ;
+            double dx = wx - cam.x, dy = wy - cam.y, dz = wz - cam.z;
+            c[i][0] = dx * rx + dy * ry + dz * rz;
+            c[i][1] = dx * ux + dy * uy + dz * uz;
+            c[i][2] = dx * fx + dy * fy + dz * fz;
+            if (c[i][2] >= NEAR) anyFront = true;
+        }
+        if (!anyFront) return;
 
-        line(x1,y1,z1, x2,y1,z1, argb); line(x2,y1,z1, x2,y1,z2, argb);
-        line(x2,y1,z2, x1,y1,z2, argb); line(x1,y1,z2, x1,y1,z1, argb);
-
-        line(x1,y2,z1, x2,y2,z1, argb); line(x2,y2,z1, x2,y2,z2, argb);
-        line(x2,y2,z2, x1,y2,z2, argb); line(x1,y2,z2, x1,y2,z1, argb);
-
-        line(x1,y1,z1, x1,y2,z1, argb); line(x2,y1,z1, x2,y2,z1, argb);
-        line(x2,y1,z2, x2,y2,z2, argb); line(x1,y1,z2, x1,y2,z2, argb);
+        for (int i = 0; i < 8; i++) {
+            if ((i & 1) == 0) line(c[i], c[i | 1], argb);
+            if ((i & 2) == 0) line(c[i], c[i | 2], argb);
+            if ((i & 4) == 0) line(c[i], c[i | 4], argb);
+        }
     }
 
-    private void line(float x1, float y1, float z1, float x2, float y2, float z2, int argb) {
-        buf.vertex(mat, x1, y1, z1).color(argb);
-        buf.vertex(mat, x2, y2, z2).color(argb);
-    }
+    private void line(double[] a, double[] b, int argb) {
+        double ax = a[0], ay = a[1], az = a[2];
+        double bx = b[0], by = b[1], bz = b[2];
+        if (az < NEAR && bz < NEAR) return;
 
-    public void flush() {
-        if (empty) return;
-        BuiltBuffer built = buf.endNullable();
-        if (built == null) return;
+        if (az < NEAR) {
+            double t = (NEAR - az) / (bz - az);
+            ax += (bx - ax) * t; ay += (by - ay) * t; az = NEAR;
+        } else if (bz < NEAR) {
+            double t = (NEAR - bz) / (az - bz);
+            bx += (ax - bx) * t; by += (ay - by) * t; bz = NEAR;
+        }
 
-        RenderSystem.setShader(GameRenderer::getPositionColorProgram);
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.disableDepthTest();
-        RenderSystem.lineWidth(2.0f);
+        double x1 = cx + ax / az * focal, y1 = cy - ay / az * focal;
+        double x2 = cx + bx / bz * focal, y2 = cy - by / bz * focal;
 
-        BufferRenderer.drawWithGlobalProgram(built);
+        if ((x1 < 0 && x2 < 0) || (x1 > screenW && x2 > screenW)
+         || (y1 < 0 && y2 < 0) || (y1 > screenH && y2 > screenH)) return;
 
-        RenderSystem.lineWidth(1.0f);
-        RenderSystem.enableDepthTest();
-        RenderSystem.disableBlend();
+        double dx = x2 - x1, dy = y2 - y1;
+        double len = Math.hypot(dx, dy);
+        if (len < 0.5 || len > 20000) return;
+
+        var m = ctx.getMatrices();
+        m.pushMatrix();
+        m.translate((float) x1, (float) y1);
+        m.rotate((float) Math.atan2(dy, dx));
+        ctx.fill(0, 0, (int) Math.ceil(len), 1, argb);
+        m.popMatrix();
     }
 }
