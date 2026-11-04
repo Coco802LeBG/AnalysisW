@@ -4,6 +4,7 @@ import com.example.fw.gui.Category;
 import com.example.fw.gui.GuiModule;
 import com.example.fw.gui.setting.Setting;
 import com.example.fw.render.LineBatch;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.minecraft.client.MinecraftClient;
 
 import java.util.ArrayList;
@@ -41,7 +42,7 @@ public abstract class Module implements GuiModule {
     protected void onEnable(MinecraftClient mc) {}
     protected void onDisable(MinecraftClient mc) {}
     public void onTick(MinecraftClient mc) {}
-    public void onRender(LineBatch batch, MinecraftClient mc, float tickProgress) {}
+    public void onRender(WorldRenderContext ctx, LineBatch batch, MinecraftClient mc) {}
     /** Appelé à la déconnexion : vider les caches. */
     public void onWorldLeave() {}
 }
