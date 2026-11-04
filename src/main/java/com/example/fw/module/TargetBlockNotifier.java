@@ -5,6 +5,7 @@ import com.example.fw.render.LineBatch;
 import com.example.fw.util.ChunkActivityTracker;
 import com.example.fw.util.ChunkUtil;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
@@ -95,7 +96,7 @@ public class TargetBlockNotifier extends Module {
     }
 
     @Override
-    public void onRender(LineBatch batch, MinecraftClient mc, float tickProgress) {
+    public void onRender(WorldRenderContext ctx, LineBatch batch, MinecraftClient mc) {
         int n = 0;
         for (List<BlockPos> list : found.values())
             for (BlockPos p : list) {
