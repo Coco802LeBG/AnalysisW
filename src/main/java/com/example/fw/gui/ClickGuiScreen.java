@@ -14,6 +14,7 @@ public class ClickGuiScreen extends Screen {
     private final List<GuiModule> allModules;
     /** Dernier élément = premier plan. */
     private final List<CategoryPanel> panels = new ArrayList<>();
+    private double lastMouseX, lastMouseY;
 
     public ClickGuiScreen(List<GuiModule> modules) {
         super(Text.literal("ClickGUI"));
@@ -38,17 +39,18 @@ public class ClickGuiScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        lastMouseX = mouseX;
+        lastMouseY = mouseY;
         context.fill(0, 0, width, height, Theme.DIM_BACKGROUND);
         for (CategoryPanel p : panels) p.render(context, textRenderer, mouseX, mouseY);
     }
 
     @Override
     public boolean mouseClicked(Click click, boolean doubled) {
-        double mouseX = click.x(), mouseY = click.y();
         int button = click.button();
         for (int i = panels.size() - 1; i >= 0; i--) {
             CategoryPanel p = panels.get(i);
-            if (p.mouseClicked(mouseX, mouseY, button)) {
+            if (p.mouseClicked(lastMouseX, lastMouseY, button)) {
                 panels.remove(i);
                 panels.add(p);
                 return true;
@@ -58,14 +60,14 @@ public class ClickGuiScreen extends Screen {
     }
 
     @Override
-    public boolean mouseDragged(Click click, double offsetX, double offsetY) {
-        for (CategoryPanel p : panels) p.mouseDragged(click.x(), click.y(), click.button(), width, height);
+    public boolean mouseDragged(Click click, double deltaX, double deltaY) {
+        for (CategoryPanel p : panels) p.mouseDragged(lastMouseX, lastMouseY, click.button(), width, height);
         return true;
     }
 
     @Override
     public boolean mouseReleased(Click click) {
-        for (CategoryPanel p : panels) p.mouseReleased(click.x(), click.y(), click.button());
+        for (CategoryPanel p : panels) p.mouseReleased(lastMouseX, lastMouseY, click.button());
         return super.mouseReleased(click);
     }
 
