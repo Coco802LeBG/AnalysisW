@@ -26,7 +26,7 @@ public class CheckboxWidget extends SettingComponent {
         int bx = x + width - BOX - 6;
         int by = y + (HEIGHT - BOX) / 2;
         ctx.fill(bx, by, bx + BOX, by + BOX, Theme.CHECK_BOX_BG);
-        Theme.border(ctx, bx, by, BOX, BOX, Theme.BORDER);
+        ctx.drawStrokedRectangle(bx, by, BOX, BOX, Theme.BORDER);
         if (bool.getValue()) ctx.fill(bx + 2, by + 2, bx + BOX - 2, by + BOX - 2, Theme.ACCENT);
     }
 
