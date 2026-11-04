@@ -70,7 +70,7 @@ public class CategoryPanel {
             }
         }
 
-        Theme.border(ctx, x, y, WIDTH, totalH, Theme.BORDER);
+        ctx.drawStrokedRectangle(x, y, WIDTH, totalH, Theme.BORDER);
     }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
